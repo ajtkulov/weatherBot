@@ -41,7 +41,17 @@ case class Sky(clouds: List[Cloud]) {
 
 }
 
-case class Forecast(inside: Option[Cloud], nearest: Cloud) {}
+case class Forecast(inside: Option[Cloud], nearest: Cloud) {
+  def toSimple(coor: Coor): SimpleForecast = {
+    SimpleForecast(inside.map(cloud => (cloud.precipitationStrength, cloud.precipitationType)), Geometry.nearest(nearest.poly, coor))
+  }
+}
+
+case class SimpleForecast(inside: Option[(Double, Int)], distance: BigDecimal)
+
+object Forecast {
+  type TimeLineForecase = Map[Instant, Forecast]
+}
 
 object ModelReader {
   def readJson(jsValue: JsValue): List[Cloud] = {
