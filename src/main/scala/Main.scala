@@ -14,7 +14,7 @@ object Main extends App {
 
     val model: SkyTimeLine = Request.getModels(new Instant())
 
-    println(model.forecast(Coor(56.846230, 53.229994)))
+    println(model.forecast(Coor(53.229994, 56.846230)))
     println(model.forecast(Coor(31.191044, 58.247710)))
 
   }

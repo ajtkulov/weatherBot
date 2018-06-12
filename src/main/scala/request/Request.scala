@@ -18,6 +18,6 @@ object Request {
   }
 
   def getModels(startTime: Instant): SkyTimeLine = {
-    SkyTimeLine(List.iterate(startTime, 6 * 3)(x => x.plus(Duration.standardMinutes(10))).flatMap(x => ModelReader.readJson(Json.parse(get(x)))))
+    SkyTimeLine(List.iterate(startTime, 6 * 3)(x => x.plus(Duration.standardMinutes(10))).toParArray.flatMap(x => ModelReader.readJson(Json.parse(get(x)))).toList)
   }
 }
