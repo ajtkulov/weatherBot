@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.pattern._
 import akka.util.Timeout
 import model.Forecast.TimeLineForecase
-import model.{Coor, Forecast, SimpleForecast}
+import model.{Coor, Forecast, Serialization, SimpleForecast}
 import org.joda.time.Instant
 
 import scala.concurrent.Future
@@ -31,6 +31,8 @@ object WebServer {
 
     holderActor ! Update()
 
+    system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
+
     def getData(long: Double, lat: Double): Future[TimeLineForecase] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase])
 
     def getSimpleData(long: Double, lat: Double): Future[Map[Instant, SimpleForecast]] =
@@ -41,7 +43,7 @@ object WebServer {
         get {
           parameters('long.as[Double], 'lat.as[Double]) { (long, lat) =>
             onComplete(getSimpleData(long, lat)) {
-              case Success(value) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, value.toString()))
+              case Success(value) => complete(HttpEntity(ContentTypes.`application/json`, Serialization.writerComplex.writes(value).toString()))
               case Failure(value) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, value.toString()))
             }
           }

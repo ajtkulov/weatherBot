@@ -1,7 +1,10 @@
 package model
 
-import org.joda.time.Instant
-import play.api.libs.json.{JsArray, JsObject, JsValue}
+import model.Forecast.{SimpleTimeLineForecase, TimeLineForecase}
+import org.joda.time.{DateTime, Instant}
+import play.api.libs.json.{JsArray, JsObject, JsValue, Writes}
+import play.api.libs.json._
+import play.api.libs.json.Json._
 
 import scala.util.{Random, Try}
 
@@ -43,14 +46,39 @@ case class Sky(clouds: List[Cloud]) {
 
 case class Forecast(inside: Option[Cloud], nearest: Cloud) {
   def toSimple(coor: Coor): SimpleForecast = {
-    SimpleForecast(inside.map(cloud => (cloud.precipitationStrength, cloud.precipitationType)), Geometry.nearest(nearest.poly, coor))
+    SimpleForecast(inside.map(cloud => (cloud.precipitationStrength, cloud.precipitationType)), Geometry.nearest(nearest.poly, coor) * 80)
   }
 }
 
 case class SimpleForecast(inside: Option[(Double, Int)], distance: BigDecimal)
 
+object Serialization {
+  implicit val writer: Writes[SimpleForecast] = new Writes[SimpleForecast] {
+    override def writes(o: SimpleForecast): JsValue = {
+      if (o.inside.isDefined) {
+        obj("strength" -> o.inside.get._1, "type" -> o.inside.get._2)
+      }
+      else {
+        obj("nearestKm" -> o.distance)
+      }
+    }
+  }
+
+  implicit val writerComplex: Writes[SimpleTimeLineForecase] = new Writes[SimpleTimeLineForecase] {
+    override def writes(o: SimpleTimeLineForecase): JsValue = {
+      val sorted = o.toList.sortBy(_._1.getMillis)
+
+      val json: List[JsObject] = sorted.map(x => {
+        writer.writes(x._2).as[JsObject] + ("time" -> JsNumber(x._1.getMillis)) + ("local_time" -> JsString(new DateTime(x._1.getMillis).toString()))
+      })
+      arr(json)
+    }
+  }
+}
+
 object Forecast {
   type TimeLineForecase = Map[Instant, Forecast]
+  type SimpleTimeLineForecase = Map[Instant, SimpleForecast]
 }
 
 object ModelReader {
