@@ -11,6 +11,8 @@ import akka.util.Timeout
 import model.Forecast.TimeLineForecase
 import model.{Coor, Forecast, Serialization, SimpleForecast}
 import org.joda.time.Instant
+import org.slf4j.LoggerFactory
+import request.Request.getClass
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -20,6 +22,8 @@ import scala.util._
   * http://localhost:8080/get?long=56.846230&lat=53.229994
   */
 object WebServer {
+  lazy val logger = LoggerFactory.getLogger(getClass)
+
   def main(args: Array[String]) {
 
     implicit val system = Holder.system
@@ -50,6 +54,7 @@ object WebServer {
         }
       }
 
+    logger.info("Starting web server on port 8080")
     Http().bindAndHandle(route, "localhost", 8080)
   }
 }
