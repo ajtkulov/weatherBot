@@ -46,7 +46,7 @@ case class Sky(clouds: List[Cloud]) {
 
 case class Forecast(inside: Option[Cloud], nearest: Cloud) {
   def toSimple(coor: Coor): SimpleForecast = {
-    SimpleForecast(inside.map(cloud => (cloud.precipitationStrength, cloud.precipitationType)), Geometry.nearest(nearest.poly, coor) * 80)
+    SimpleForecast(inside.map(cloud => (cloud.precipitationStrength, cloud.precipitationType)), Geometry.nearest(nearest.poly, coor))
   }
 }
 
@@ -161,7 +161,21 @@ object Geometry {
     Math.sqrt(sq.toDouble)
   }
 
+  def sphereDistance(a: Coor, b: Coor): BigDecimal = {
+    def angleToRadian(value: BigDecimal): BigDecimal = value * Math.PI / 180
+
+    val r: BigDecimal = 6371
+
+    val f1 = angleToRadian(a.x)
+    val f2 = angleToRadian(b.x)
+    val df = angleToRadian(b.x - a.x)
+    val dl = angleToRadian(b.y - a.y)
+    val aa = Math.sin(df.toDouble / 2.0) * Math.sin(df.toDouble / 2.0) + Math.cos(f1.toDouble) * Math.cos(f2.toDouble) * Math.sin(dl.toDouble / 2) * Math.sin(dl.toDouble / 2)
+    val cc = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
+    r * cc
+  }
+
   def nearest(poly: Poly, d: Coor): BigDecimal = {
-    poly.values.map(distance(_, d)).min
+    poly.values.map(sphereDistance(_, d)).min
   }
 }
