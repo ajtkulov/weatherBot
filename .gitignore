@@ -1,4 +1,5 @@
 /server/logs
+*.token
 *~
 *.swp
 *.ipr
