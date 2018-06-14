@@ -27,15 +27,13 @@ object WebServer {
   lazy val holderActor = system.actorOf(Props(new HolderActor()))
   implicit val executionContext = system.dispatcher
 
+  holderActor ! Update()
+
+  system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
+
   def getData(long: Double, lat: Double): Future[TimeLineForecase] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase])
 
   def main(args: Array[String]) {
-
-    holderActor ! Update()
-
-    system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
-
-
     def getSimpleData(long: Double, lat: Double): Future[Map[Instant, SimpleForecast]] =
       (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(lat, long))))
 
