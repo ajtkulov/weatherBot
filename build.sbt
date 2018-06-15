@@ -42,3 +42,39 @@ libraryDependencies ++= Seq(
 fork := true
 
 fork in run := true
+
+libraryDependencies ++= Seq(
+  "mysql" % "mysql-connector-java" % "5.1.22"
+)
+
+enablePlugins(FlywayPlugin)
+
+val weatherSqlUrl = settingKey[String]("weatherSqlUrl")
+
+val weatherSqlUser = settingKey[String]("weatherSqlUser")
+
+val weatherSqlPassword = settingKey[String]("weatherSqlPassword")
+
+val dbPath = settingKey[String]("path to db migration scripts")
+
+val historyFlywayTable = settingKey[String]("flywayTable")
+
+weatherSqlUser := sys.props.getOrElse("user", default = "root")
+
+weatherSqlPassword := sys.props.getOrElse("password", default = "password")
+
+weatherSqlUrl := sys.props.getOrElse("url", default = "jdbc:mysql://localhost:3306/weather")
+
+dbPath := sys.props.getOrElse("dbPath", default = "filesystem:db/sql")
+
+historyFlywayTable := sys.props.getOrElse("historyFlywayTable", default = "schema_version")
+
+flywayUser := weatherSqlUser.value
+
+flywayPassword := weatherSqlPassword.value
+
+flywayUrl := weatherSqlUrl.value
+
+flywayLocations := Seq(dbPath.value)
+
+flywayTable := historyFlywayTable.value
