@@ -99,18 +99,16 @@ object Shows {
   implicit val showSimpleForecast: Show[SimpleForecast] = new Show[SimpleForecast] {
     override def show(value: SimpleForecast): String = {
       value match {
-        case SimpleForecast(Some((0.25, 1)), _) => "[light rain]"
-        case SimpleForecast(Some((0.5, 1)), _) => "[rain]"
-        case SimpleForecast(Some((0.75, 1)), _) => "[strengthened rain]"
-        case SimpleForecast(Some((1.0, 1)), _) => "[heavy rain]"
-        case SimpleForecast(None, d) if d < 2 => "[near, <2km]"
-        case SimpleForecast(None, d) if d <= 5.1 => "[near, <5km]"
-        case SimpleForecast(None, d) if d > 100 => "[far away, >100km]"
-        case SimpleForecast(None, d) if d > 50 => "[far away, >50km]"
-        case SimpleForecast(None, d) if d > 25 => "[somewhere, >25km]"
-        case SimpleForecast(None, d) if d > 10 => "[somewhere, >10km]"
-        case SimpleForecast(None, d) if d > 5 => "[somewhere, >5km]"
-        case SimpleForecast(Some((_, 2)), _) => "[snow]"
+        case SimpleForecast(Some((0.25, 1)), _) => """🌦️"""
+        case SimpleForecast(Some((0.5, 1)), _) => "🌧"
+        case SimpleForecast(Some((0.75, 1)), _) => "⛈"
+        case SimpleForecast(Some((1.0, 1)), _) => "⚡"
+        case SimpleForecast(None, d) if d < 2 => "☁️"
+        case SimpleForecast(None, d) if d <= 5.1 => "❔"
+        case SimpleForecast(None, d) if d > 50 => """☀"""
+        case SimpleForecast(None, d) if d > 10 => "🌤"
+        case SimpleForecast(None, d) if d > 5 => "⛅"
+        case SimpleForecast(Some((_, 2)), _) => "❄️"
 
         case _ => "[???]"
       }
