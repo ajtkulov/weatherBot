@@ -31,15 +31,15 @@ object WebServer {
 
   system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
 
-  def getData(lat: Double, long: Double): Future[SimpleTimeLineForecase] = (holderActor ? Query(lat, long)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(lat, long))))
+  def getData(long: BigDecimal, lat: BigDecimal): Future[SimpleTimeLineForecase] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(long, lat))))
 
   def main(args: Array[String]) {
 
     val route =
       path("get") {
         get {
-          parameters('lat.as[Double], 'long.as[Double]) { (lat, long) =>
-            onComplete(getData(lat, long)) {
+          parameters('long.as[Double], 'lat.as[Double]) { (long, lat) =>
+            onComplete(getData(long, lat)) {
               case Success(value) => complete(HttpEntity(ContentTypes.`application/json`, Serialization.writerComplex.writes(value).toString()))
               case Failure(value) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, value.toString()))
             }

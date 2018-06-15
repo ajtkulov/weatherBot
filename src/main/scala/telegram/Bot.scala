@@ -29,8 +29,8 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
       if (msg.location.isDefined) {
 
         msg.location.foreach(location => {
-          val coor = Coor(location.latitude, location.longitude)
-          val f: Future[SimpleTimeLineForecase] = WebServer.getData(location.latitude, location.longitude)
+          val coor = Coor(location.longitude, location.latitude)
+          val f: Future[SimpleTimeLineForecase] = WebServer.getData(location.longitude, location.latitude)
           f.foreach(simpleTimeLineForecase => reply(Shows.showSimpleTimeLineForecase.show(simpleTimeLineForecase)))
         })
 
