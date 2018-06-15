@@ -79,6 +79,43 @@ object Serialization {
 object Forecast {
   type TimeLineForecase = Map[Instant, Forecast]
   type SimpleTimeLineForecase = Map[Instant, SimpleForecast]
+
+  def toSimple(value: TimeLineForecase)(coor: Coor): SimpleTimeLineForecase = value.mapValues(_.toSimple(coor))
+}
+
+trait Show[T] {
+  def show(value: T): String
+}
+
+object Shows {
+
+  implicit val showSimpleTimeLineForecase: Show[SimpleTimeLineForecase] = new Show[SimpleTimeLineForecase] {
+    override def show(value: SimpleTimeLineForecase): String = {
+      val sorted = value.toList.sortBy(_._1.getMillis)
+      sorted.map(x => showSimpleForecast.show(x._2)).mkString(" ")
+    }
+  }
+
+  implicit val showSimpleForecast: Show[SimpleForecast] = new Show[SimpleForecast] {
+    override def show(value: SimpleForecast): String = {
+      value match {
+        case SimpleForecast(Some((0.25, 1)), _) => "[light rain]"
+        case SimpleForecast(Some((0.5, 1)), _) => "[rain]"
+        case SimpleForecast(Some((0.75, 1)), _) => "[strengthened rain]"
+        case SimpleForecast(Some((1.0, 1)), _) => "[heavy rain]"
+        case SimpleForecast(None, d) if d < 2 => "[near, <2km]"
+        case SimpleForecast(None, d) if d <= 5.1 => "[near, <5km]"
+        case SimpleForecast(None, d) if d > 100 => "[far away, >100km]"
+        case SimpleForecast(None, d) if d > 50 => "[far away, >50km]"
+        case SimpleForecast(None, d) if d > 25 => "[somewhere, >25km]"
+        case SimpleForecast(None, d) if d > 10 => "[somewhere, >10km]"
+        case SimpleForecast(None, d) if d > 5 => "[somewhere, >5km]"
+        case SimpleForecast(Some((_, 2)), _) => "[snow]"
+
+        case _ => "[???]"
+      }
+    }
+  }
 }
 
 object ModelReader {
