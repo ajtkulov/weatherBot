@@ -3,7 +3,7 @@ package telegram
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
 import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
 import model.{Coor, Forecast, Shows}
-import model.Forecast.TimeLineForecase
+import model.Forecast.{SimpleTimeLineForecase}
 import web.{Holder, WebServer}
 
 import scala.concurrent.Future
@@ -30,10 +30,11 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
 
         msg.location.foreach(location => {
           val coor = Coor(location.latitude, location.longitude)
-          val f: Future[TimeLineForecase] = WebServer.getData(location.longitude, location.latitude)
-          f.map(timeLineForecase => Forecast.toSimple(timeLineForecase)(coor))
-            .foreach(simpleTimeLineForecase => reply(Shows.showSimpleTimeLineForecase.show(simpleTimeLineForecase)))
+          val f: Future[SimpleTimeLineForecase] = WebServer.getData(location.latitude, location.longitude)
+          f.foreach(simpleTimeLineForecase => reply(Shows.showSimpleTimeLineForecase.show(simpleTimeLineForecase)))
         })
+
+        logger.info(msg.toString)
       }
   }
 }

@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.http.scaladsl.server.Directives._
 import akka.pattern._
 import akka.util.Timeout
-import model.Forecast.TimeLineForecase
+import model.Forecast.{SimpleTimeLineForecase, TimeLineForecase}
 import model.{Coor, Forecast, Serialization, SimpleForecast}
 import org.joda.time.Instant
 import org.slf4j.LoggerFactory
@@ -31,17 +31,15 @@ object WebServer {
 
   system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
 
-  def getData(long: Double, lat: Double): Future[TimeLineForecase] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase])
+  def getData(lat: Double, long: Double): Future[SimpleTimeLineForecase] = (holderActor ? Query(lat, long)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(lat, long))))
 
   def main(args: Array[String]) {
-    def getSimpleData(long: Double, lat: Double): Future[Map[Instant, SimpleForecast]] =
-      (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(lat, long))))
 
     val route =
       path("get") {
         get {
-          parameters('long.as[Double], 'lat.as[Double]) { (long, lat) =>
-            onComplete(getSimpleData(long, lat)) {
+          parameters('lat.as[Double], 'long.as[Double]) { (lat, long) =>
+            onComplete(getData(lat, long)) {
               case Success(value) => complete(HttpEntity(ContentTypes.`application/json`, Serialization.writerComplex.writes(value).toString()))
               case Failure(value) => complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, value.toString()))
             }
