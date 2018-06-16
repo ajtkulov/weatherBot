@@ -1,9 +1,10 @@
 package telegram
 
+import dao.{Location, Locations, MysqlUtils}
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
 import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
 import model.{Coor, Forecast, Shows}
-import model.Forecast.{SimpleTimeLineForecase}
+import model.Forecast.SimpleTimeLineForecase
 import web.{Holder, WebServer}
 
 import scala.concurrent.Future
@@ -32,6 +33,9 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
           val coor = Coor(location.longitude, location.latitude)
           val f: Future[SimpleTimeLineForecase] = WebServer.getData(location.longitude, location.latitude)
           f.foreach(simpleTimeLineForecase => reply(Shows.showSimpleTimeLineForecase.show(simpleTimeLineForecase)))
+
+          val insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", "some name"))
+          MysqlUtils.db.run(insert)
         })
 
         logger.info(msg.toString)
