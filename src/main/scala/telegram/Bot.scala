@@ -2,7 +2,7 @@ package telegram
 
 import dao.{Location, Locations, MysqlUtils}
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
-import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
+import info.mukel.telegrambot4s.api.{Extractors, Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.{SendLocation, SendMessage}
 import info.mukel.telegrambot4s.models.{ChatId, Message}
 import model.{Coor, Forecast, Shows}
@@ -52,8 +52,9 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | Доступные команды:
         | /help, /? - данная справка
         | отправить гео-точку - просмотреть прогноз и добавить ее в список отслеживаемых
-        | /checkAll - проверить прогноз по всем точкам
-        | /showAll  - показать данные по отмеченным гео-точкам
+        | /checkAll            - проверить прогноз по всем точкам
+        | /showAll             - показать данные по отмеченным гео-точкам
+        | /show [номер точки]  - показать данные по конкретной гео-точке
       """.stripMargin
     reply(help)
   }
@@ -69,12 +70,26 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         location => {
           for {
             _ <- reply(s"""${location.index}: ${location.name}""")
-            _ <- request (SendLocation(location.chatId, location.latitude, location.longitude))
           } yield ()
         }
       }
 
     } yield ()
+  }
+
+  onCommand("/show") { implicit msg =>
+    withArgs {
+      case Seq(Extractors.Int(index)) if index > 0 =>
+        for {
+          locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
+          _ = locations.headOption.foreach(location => {
+            reply(s"""${location.index}: ${location.name}""")
+            SendLocation(location.chatId, location.latitude, location.longitude)
+          })
+        } yield ()
+      case _ =>
+        reply("/show [номер точки], например /show 1")
+    }
   }
 
   onMessage {

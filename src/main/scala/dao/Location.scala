@@ -37,4 +37,8 @@ object Locations {
   def getByUserId(userId: Int) = {
     table.filter(location => location.userId === userId).result
   }
+
+  def getByUserIdAndIndex(userId: Int, index: Int) = {
+    table.filter(location => location.userId === userId && location.index === index).result
+  }
 }
