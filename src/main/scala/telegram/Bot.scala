@@ -3,7 +3,7 @@ package telegram
 import dao.{Location, Locations, MysqlUtils}
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
 import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
-import info.mukel.telegrambot4s.methods.SendMessage
+import info.mukel.telegrambot4s.methods.{SendLocation, SendMessage}
 import info.mukel.telegrambot4s.models.{ChatId, Message}
 import model.{Coor, Forecast, Shows}
 import model.Forecast.SimpleTimeLineForecast
@@ -31,7 +31,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   onCommand("/help", "/?") { implicit msg =>
     val help =
       """
-        | Прогноз осадков на 2 часа с шагов в 10 минут.
+        | Прогноз осадков на 2 часа с шагом в 10 минут.
         |
         | Обозначения:
         | 🌦️ - слабый дождь
@@ -53,6 +53,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | /help, /? - данная справка
         | отправить гео-точку - просмотреть прогноз и добавить ее в список отслеживаемых
         | /checkAll - проверить прогноз по всем точкам
+        | /showAll  - показать данные по отмеченным гео-точкам
       """.stripMargin
     reply(help)
   }
@@ -62,7 +63,16 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   }
 
   onCommand("/showAll") { implicit msg =>
-    reply("showAll")
+    for {
+      active <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
+      _ = active.foreach {
+        location => {
+          reply(s"""${location.index}: ${location.name}""")
+          request(SendLocation(location.chatId, location.latitude, location.longitude))
+        }
+      }
+
+    } yield ()
   }
 
   onMessage {
