@@ -50,11 +50,12 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | означает, что первый час в точке идет дождь (первые 6 иконок), затем отсутствие осадков через час.
         |
         | Доступные команды:
-        | /help, /? - данная справка
-        | отправить гео-точку - просмотреть прогноз и добавить ее в список отслеживаемых
-        | /checkAll            - проверить прогноз по всем точкам
-        | /showAll             - показать данные по отмеченным гео-точкам
-        | /show [номер точки]  - показать данные по конкретной гео-точке
+        | /help, /?                    - данная справка
+        | отправить гео-точку          - просмотреть прогноз и добавить ее в список отслеживаемых
+        | /checkAll                    - проверить прогноз по всем точкам
+        | /showAll                     - показать данные по отмеченным гео-точкам
+        | /show [номер точки]          - показать данные по конкретной гео-точке
+        | /rename [номер точки] [имя]  - показать данные по конкретной гео-точке
       """.stripMargin
     reply(help)
   }
@@ -91,6 +92,20 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         } yield ()
       case _ =>
         reply("/show [номер точки], например /show 1")
+    }
+  }
+
+  onCommand("/rename") { implicit msg =>
+    withArgs {
+      case Seq(Extractors.Int(index), value) if index > 0 =>
+        for {
+          locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
+          _ = locations.headOption.foreach(location => {
+            MysqlUtils.db.run(Locations.insert(location.copy(name = value)))
+          })
+        } yield ()
+      case _ =>
+        reply("/rename [номер точки] [название], например /rename 1 дом")
     }
   }
 
