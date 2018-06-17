@@ -4,9 +4,9 @@ import dao.{Location, Locations, MysqlUtils}
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
 import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.ChatId
+import info.mukel.telegrambot4s.models.{ChatId, Message}
 import model.{Coor, Forecast, Shows}
-import model.Forecast.SimpleTimeLineForecase
+import model.Forecast.SimpleTimeLineForecast
 import org.joda.time.Instant
 import web.{Holder, WebServer}
 
@@ -48,8 +48,21 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | Например,
         | 🌦️ 🌦️ 🌧 🌧 🌦️ 🌦️ ☁️ ❔ 🌤 🌤 🌤 ☀ ☀ ☀
         | означает, что первый час в точке идет дождь (первые 6 иконок), затем отсутствие осадков через час.
+        |
+        | Доступные команды:
+        | /help, /? - данная справка
+        | отправить гео-точку - просмотреть прогноз и добавить ее в список отслеживаемых
+        | /checkAll - проверить прогноз по всем точкам
       """.stripMargin
     reply(help)
+  }
+
+  onCommand("/checkAll") { implicit msg =>
+    checkUser(msg.from.get.id)
+  }
+
+  onCommand("/showAll") { implicit msg =>
+    reply("showAll")
   }
 
   onMessage {
@@ -57,21 +70,34 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
       if (msg.location.isDefined) {
 
         msg.location.foreach(location => {
-          val coor = Coor(location.longitude, location.latitude)
-          val f: Future[SimpleTimeLineForecase] = WebServer.getData(location.longitude, location.latitude)
-          f.foreach(simpleTimeLineForecase => reply(Shows.showSimpleTimeLineForecase.show(simpleTimeLineForecase)))
-
           for {
             byUser: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
             indecies: Set[Int] = byUser.map(x => x.index).toSet
             minIndex = ((1 to 5).toSet -- indecies).minBy(identity)
+            forecast <- WebServer.getData(location.longitude, location.latitude)
+            _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
             insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", "some name", new Instant(), minIndex))
             _ <- MysqlUtils.db.run(insert)
-
           } yield ()
         })
 
         logger.info(msg.toString)
       }
+  }
+
+  def checkUser(userId: Int)(implicit msg: Message): Future[Unit] = {
+    for {
+      active: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(userId))
+      _ = active.foreach(location => {
+        WebServer.getData(location.longitude, location.latitude).foreach(forecast => {
+          val show = Shows.showSimpleTimeLineForecase.show(forecast)
+          val result =
+            s"""${location.index}: ${location.name}
+               |$show
+          """.stripMargin
+          reply(result)
+        })
+      })
+    } yield ()
   }
 }

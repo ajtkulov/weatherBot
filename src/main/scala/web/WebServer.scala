@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.http.scaladsl.server.Directives._
 import akka.pattern._
 import akka.util.Timeout
-import model.Forecast.{SimpleTimeLineForecase, TimeLineForecase}
+import model.Forecast.{SimpleTimeLineForecast, TimeLineForecase}
 import model.{Coor, Forecast, Serialization, SimpleForecast}
 import org.joda.time.Instant
 import org.slf4j.LoggerFactory
@@ -31,7 +31,7 @@ object WebServer {
 
   system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
 
-  def getData(long: BigDecimal, lat: BigDecimal): Future[SimpleTimeLineForecase] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(long, lat))))
+  def getData(long: BigDecimal, lat: BigDecimal): Future[SimpleTimeLineForecast] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(long, lat))))
 
   def main(args: Array[String]) {
 

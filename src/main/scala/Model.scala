@@ -1,6 +1,6 @@
 package model
 
-import model.Forecast.{SimpleTimeLineForecase, TimeLineForecase}
+import model.Forecast.{SimpleTimeLineForecast, TimeLineForecase}
 import org.joda.time.{DateTime, Instant}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Writes}
 import play.api.libs.json._
@@ -64,8 +64,8 @@ object Serialization {
     }
   }
 
-  implicit val writerComplex: Writes[SimpleTimeLineForecase] = new Writes[SimpleTimeLineForecase] {
-    override def writes(o: SimpleTimeLineForecase): JsValue = {
+  implicit val writerComplex: Writes[SimpleTimeLineForecast] = new Writes[SimpleTimeLineForecast] {
+    override def writes(o: SimpleTimeLineForecast): JsValue = {
       val sorted = o.toList.sortBy(_._1.getMillis)
 
       val json: List[JsObject] = sorted.map(x => {
@@ -78,9 +78,9 @@ object Serialization {
 
 object Forecast {
   type TimeLineForecase = Map[Instant, Forecast]
-  type SimpleTimeLineForecase = Map[Instant, SimpleForecast]
+  type SimpleTimeLineForecast = Map[Instant, SimpleForecast]
 
-  def toSimple(value: TimeLineForecase)(coor: Coor): SimpleTimeLineForecase = value.mapValues(_.toSimple(coor))
+  def toSimple(value: TimeLineForecase)(coor: Coor): SimpleTimeLineForecast = value.mapValues(_.toSimple(coor))
 }
 
 trait Show[T] {
@@ -89,8 +89,8 @@ trait Show[T] {
 
 object Shows {
 
-  implicit val showSimpleTimeLineForecase: Show[SimpleTimeLineForecase] = new Show[SimpleTimeLineForecase] {
-    override def show(value: SimpleTimeLineForecase): String = {
+  implicit val showSimpleTimeLineForecase: Show[SimpleTimeLineForecast] = new Show[SimpleTimeLineForecast] {
+    override def show(value: SimpleTimeLineForecast): String = {
       val sorted = value.toList.sortBy(_._1.getMillis)
       sorted.map(x => showSimpleForecast.show(x._2)).mkString(" ")
     }
