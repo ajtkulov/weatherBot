@@ -7,5 +7,7 @@ create table if not exists `location`
 `latitude` DOUBLE NOT NULL,
 `enable` BOOLEAN NOT NULL,
 `schedule` VARCHAR(254) NOT NULL,
-`name` TEXT NOT NULL
+`name` TEXT NOT NULL,
+`last_check` DATETIME NOT NULL,
+`index` INTEGER NOT NULL
 );
