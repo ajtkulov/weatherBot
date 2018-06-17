@@ -67,8 +67,10 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
       active <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
       _ = active.foreach {
         location => {
-          reply(s"""${location.index}: ${location.name}""")
-          request(SendLocation(location.chatId, location.latitude, location.longitude))
+          for {
+            _ <- reply(s"""${location.index}: ${location.name}""")
+            _ <- request (SendLocation(location.chatId, location.latitude, location.longitude))
+          } yield ()
         }
       }
 
