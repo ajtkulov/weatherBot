@@ -24,10 +24,6 @@ libraryDependencies += "org.slf4j" % "log4j-over-slf4j" % "1.7.16"
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.1"
 
-//libraryDependencies += "com.typesafe.akka" %% "akka-http"   % "10.1.2"
-//
-//libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.5.13"
-
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,

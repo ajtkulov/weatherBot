@@ -111,22 +111,19 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
 
   onMessage {
     implicit msg =>
-      if (msg.location.isDefined) {
-
-        msg.location.foreach(location => {
-          for {
-            byUser: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
-            indecies: Set[Int] = byUser.map(x => x.index).toSet
-            minIndex = ((1 to 5).toSet -- indecies).minBy(identity)
-            forecast <- WebServer.getData(location.longitude, location.latitude)
-            _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
-            insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", "some name", new Instant(), minIndex))
-            _ <- MysqlUtils.db.run(insert)
-          } yield ()
-        })
-
+      msg.location.foreach(location => {
+        for {
+          byUser: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
+          indices: Set[Int] = byUser.map(x => x.index).toSet
+          minIndex = ((1 to 5).toSet -- indices).minBy(identity)
+          forecast <- WebServer.getData(location.longitude, location.latitude)
+          _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
+          insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", "some name", new Instant(), minIndex))
+          _ <- MysqlUtils.db.run(insert)
+        } yield ()
         logger.info(msg.toString)
-      }
+      })
+
   }
 
   def checkUser(userId: Int)(implicit msg: Message): Future[Unit] = {
