@@ -4,13 +4,13 @@ import dao.{Location, Locations, MysqlUtils}
 import info.mukel.telegrambot4s.api.declarative.{Commands, InlineQueries}
 import info.mukel.telegrambot4s.api.{Extractors, Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.{SendLocation, SendMessage}
-import info.mukel.telegrambot4s.models.{ChatId, Message}
-import model.{Coor, Forecast, Shows}
-import model.Forecast.SimpleTimeLineForecast
-import org.joda.time.Instant
+import info.mukel.telegrambot4s.models.Message
+import model.Shows
+import org.joda.time.{DateTime, DateTimeZone, Instant}
 import web.{Holder, WebServer}
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
@@ -21,12 +21,15 @@ object Main extends App {
 object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   implicit val akkaSystem = Holder.system
 
-  lazy val token: String = scala.io.Source.fromFile("tg.token").getLines.toList.head.trim
+  akkaSystem.scheduler.schedule(1 minutes, 20 minutes, () => {
+    val now = new DateTime(DateTimeZone.forID("Europe/Moscow"))
+    val hour = now.getHourOfDay
+    if (hour >= 5 && hour <= 22) {
+      checkUsers()
+    }
+  })
 
-  onCommand("/test") { implicit msg =>
-    println(msg)
-    reply("My token is SAFE!")
-  }
+  lazy val token: String = scala.io.Source.fromFile("tg.token").getLines.toList.head.trim
 
   onCommand("/help", "/?") { implicit msg =>
     val help =
@@ -154,4 +157,29 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
       })
     } yield ()
   }
+
+  def checkUsers(): Future[Unit] = {
+    for {
+      active: Seq[Location] <- MysqlUtils.db.run(Locations.findActive())
+      _ = active.foreach(location => {
+        WebServer.getData(location.longitude, location.latitude).foreach(forecast => {
+          if (forecast.values.toList.exists(x => x.inside.isDefined)) {
+            val show = Shows.showSimpleTimeLineForecase.show(forecast)
+            val result =
+              s"""В точке ${location.index}: ${location.name} ожидаются осадки.
+                 |$show
+          """.stripMargin
+            request(
+              SendMessage(
+                location.chatId,
+                result
+              )
+            )
+          }
+        })
+      })
+    } yield ()
+  }
+
+
 }
