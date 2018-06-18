@@ -56,12 +56,25 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | /showAll                     - показать данные по отмеченным гео-точкам
         | /show [номер точки]          - показать данные по конкретной гео-точке
         | /rename [номер точки] [имя]  - показать данные по конкретной гео-точке
+        | /delete [номер точки]        - удалить гео-точку
       """.stripMargin
     reply(help)
   }
 
   onCommand("/checkAll") { implicit msg =>
     checkUser(msg.from.get.id)
+  }
+
+  onCommand("/delete") { implicit msg =>
+    withArgs {
+      case Seq(Extractors.Int(index)) if index > 0 =>
+        for {
+          _ <- MysqlUtils.db.run(Locations.deleteByUserIdAndIndex(msg.from.get.id, index))
+          _ <- reply(s"Точка ${index} удалена")
+        } yield ()
+      case _ =>
+        reply("/delete [номер точки], например /delete 1")
+    }
   }
 
   onCommand("/showAll") { implicit msg =>

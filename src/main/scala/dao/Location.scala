@@ -41,4 +41,8 @@ object Locations {
   def getByUserIdAndIndex(userId: Int, index: Int) = {
     table.filter(location => location.userId === userId && location.index === index).result
   }
+
+  def deleteByUserIdAndIndex(userId: Int, index: Int) = {
+    table.filter(location => location.userId === userId && location.index === index).delete
+  }
 }
