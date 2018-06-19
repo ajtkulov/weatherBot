@@ -11,6 +11,7 @@ import web.{Holder, WebServer}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
@@ -118,17 +119,23 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   }
 
   onCommand("/rename") { implicit msg =>
-    withArgs {
-      case Extractors.Int(index) :: value if index > 0 =>
+    withArgs { args => {
+      if (args.size > 1 && Try {
+        args.head.toInt
+      }.isSuccess && args.head.toInt > 0) {
+        val index = args.head.toInt
         for {
           locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
           _ = locations.headOption.foreach(location => {
-            MysqlUtils.db.run(Locations.insert(location.copy(name = value.mkString(" ").take(64))))
+            MysqlUtils.db.run(Locations.insert(location.copy(name = args.mkString(" ").take(64))))
           })
           _ <- reply("Точка переименована")
         } yield ()
-      case _ =>
+      }
+      else {
         reply("/rename [номер точки] [название], например /rename 1 дом")
+      }
+    }
     }
   }
 
