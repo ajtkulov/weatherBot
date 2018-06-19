@@ -31,11 +31,31 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
 
   lazy val token: String = scala.io.Source.fromFile("tg.token").getLines.toList.head.trim
 
-  onCommand("/help", "/?") { implicit msg =>
+  onCommand("/help", "/?", "/start") { implicit msg =>
     val help =
       """
         | Прогноз осадков на 2 часа с шагом в 10 минут.
         |
+        | Доступные команды:
+        | /legend                      - обозначения
+        | /help, /?                    - данная справка
+        | отправить гео-точку          - просмотреть прогноз и добавить ее в список отслеживаемых
+        | /checkAll                    - проверить прогноз по всем точкам
+        | /showAll                     - показать данные по отмеченным гео-точкам
+        | /show [номер точки]          - показать данные по конкретной гео-точке
+        | /rename [номер точки] [имя]  - показать данные по конкретной гео-точке
+        | /delete [номер точки]        - удалить гео-точку
+      """.stripMargin
+    reply(help)
+  }
+
+  onCommand("/checkAll") { implicit msg =>
+    checkUser(msg.from.get.id)
+  }
+
+  onCommand("/legend") { implicit msg =>
+    reply(
+      """
         | Обозначения:
         | 🌦️ - слабый дождь
         | 🌧 - дождь
@@ -51,21 +71,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | Например,
         | 🌦️ 🌦️ 🌧 🌧 🌦️ 🌦️ ☁️ ❔ 🌤 🌤 🌤 ☀ ☀ ☀
         | означает, что первый час в точке идет дождь (первые 6 иконок), затем отсутствие осадков через час.
-        |
-        | Доступные команды:
-        | /help, /?                    - данная справка
-        | отправить гео-точку          - просмотреть прогноз и добавить ее в список отслеживаемых
-        | /checkAll                    - проверить прогноз по всем точкам
-        | /showAll                     - показать данные по отмеченным гео-точкам
-        | /show [номер точки]          - показать данные по конкретной гео-точке
-        | /rename [номер точки] [имя]  - показать данные по конкретной гео-точке
-        | /delete [номер точки]        - удалить гео-точку
-      """.stripMargin
-    reply(help)
-  }
-
-  onCommand("/checkAll") { implicit msg =>
-    checkUser(msg.from.get.id)
+      """.stripMargin)
   }
 
   onCommand("/delete") { implicit msg =>
@@ -119,6 +125,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
           _ = locations.headOption.foreach(location => {
             MysqlUtils.db.run(Locations.insert(location.copy(name = value)))
           })
+          _ <- reply("Точка переименована")
         } yield ()
       case _ =>
         reply("/rename [номер точки] [название], например /rename 1 дом")
@@ -134,8 +141,10 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
           minIndex = ((1 to 5).toSet -- indices).minBy(identity)
           forecast <- WebServer.getData(location.longitude, location.latitude)
           _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
-          insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", "some name", new Instant(), minIndex))
+          name = "some name"
+          insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", name, new Instant(), minIndex))
           _ <- MysqlUtils.db.run(insert)
+          _ <- reply(s"Добавил точку $minIndex $name. Чтобы переименовать, воспользуйтесь /rename ${minIndex} [новое_имя]")
         } yield ()
         logger.info(msg.toString)
       })
