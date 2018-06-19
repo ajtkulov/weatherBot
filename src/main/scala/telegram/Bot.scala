@@ -119,11 +119,11 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
 
   onCommand("/rename") { implicit msg =>
     withArgs {
-      case Seq(Extractors.Int(index), value) if index > 0 =>
+      case Extractors.Int(index) :: value if index > 0 =>
         for {
           locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
           _ = locations.headOption.foreach(location => {
-            MysqlUtils.db.run(Locations.insert(location.copy(name = value)))
+            MysqlUtils.db.run(Locations.insert(location.copy(name = value.mkString(" ").take(64))))
           })
           _ <- reply("Точка переименована")
         } yield ()
