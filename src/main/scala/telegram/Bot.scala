@@ -22,7 +22,7 @@ object Main extends App {
 object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   implicit val akkaSystem = Holder.system
 
-  akkaSystem.scheduler.schedule(1 minutes, 20 minutes, () => {
+  akkaSystem.scheduler.schedule(20 minutes, 20 minutes, () => {
     val now = new DateTime(DateTimeZone.forID("Europe/Moscow"))
     val hour = now.getHourOfDay
     if (hour >= 5 && hour <= 22) {
@@ -171,9 +171,12 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
             _ <- MysqlUtils.db.run(insert)
             _ <- reply(s"Добавил точку $minIndex $name. Чтобы переименовать, воспользуйтесь /rename ${minIndex} [новое_имя]")
           } yield ()
-          logger.info(msg.toString)
         })
+      } else if (getIdx(msg).getOrElse(-1) >= 1) {
+        show(getIdx(msg).get)
       }
+
+      logger.info(msg.toString)
     }
   }
 
