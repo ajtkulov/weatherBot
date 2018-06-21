@@ -157,7 +157,6 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   }
 
   onMessage {
-
     implicit msg => {
       if (msg.location.isDefined) {
         msg.location.foreach(location => {
@@ -174,11 +173,6 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
           } yield ()
           logger.info(msg.toString)
         })
-      } else if (getIdx(msg).getOrElse(-1) > 1) {
-        show(getIdx(msg).get)
-      }
-      else {
-        reply("Не понял команду")
       }
     }
   }
