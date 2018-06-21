@@ -46,6 +46,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
         | /show [номер точки]          - показать данные по конкретной гео-точке
         | /rename [номер точки] [имя]  - показать данные по конкретной гео-точке
         | /delete [номер точки]        - удалить гео-точку
+        | [номер точки]                - тоже что и /show [номер точки]
       """.stripMargin
     reply(help)
   }
@@ -101,21 +102,28 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
     } yield ()
   }
 
-  onCommand("/show") { implicit msg =>
-    withArgs {
-      case Seq(Extractors.Int(index)) if index > 0 =>
+  def show(index: Int)(implicit msg: Message): Future[Unit] = {
+    for {
+      locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
+      _ = locations.headOption.foreach(location => {
         for {
-          locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
-          _ = locations.headOption.foreach(location => {
-            for {
-              _ <- reply(s"""${location.index}: ${location.name}""")
-              _ <- request(SendLocation(location.chatId, location.latitude, location.longitude))
-            } yield ()
-          })
+          _ <- reply(s"""${location.index}: ${location.name}""")
+          _ <- request(SendLocation(location.chatId, location.latitude, location.longitude))
+          forecast <- WebServer.getData(location.longitude, location.latitude)
+          _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
         } yield ()
-      case _ =>
-        reply("/show [номер точки], например /show 1")
-    }
+      })
+    } yield ()
+  }
+
+  onCommand("/show") {
+    implicit msg =>
+      withArgs {
+        case Seq(Extractors.Int(index)) if index > 0 =>
+          show(index)
+        case _ =>
+          reply("/show [номер точки], например /show 1")
+      }
   }
 
   onCommand("/rename") { implicit msg =>
@@ -139,23 +147,40 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
     }
   }
 
-  onMessage {
-    implicit msg =>
-      msg.location.foreach(location => {
-        for {
-          byUser: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
-          indices: Set[Int] = byUser.map(x => x.index).toSet
-          minIndex = ((1 to 5).toSet -- indices).minBy(identity)
-          forecast <- WebServer.getData(location.longitude, location.latitude)
-          _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
-          name = "some name"
-          insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", name, new Instant(), minIndex))
-          _ <- MysqlUtils.db.run(insert)
-          _ <- reply(s"Добавил точку $minIndex $name. Чтобы переименовать, воспользуйтесь /rename ${minIndex} [новое_имя]")
-        } yield ()
-        logger.info(msg.toString)
-      })
+  def getIdx(msg: Message) = {
+    msg.text.map(x => {
+      val i: Int = Try {
+        x.toInt
+      }.getOrElse(-1)
+      i
+    })
+  }
 
+  onMessage {
+
+    implicit msg => {
+      if (msg.location.isDefined) {
+        msg.location.foreach(location => {
+          for {
+            byUser: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
+            indices: Set[Int] = byUser.map(x => x.index).toSet
+            minIndex = ((1 to 5).toSet -- indices).minBy(identity)
+            forecast <- WebServer.getData(location.longitude, location.latitude)
+            _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
+            name = "some name"
+            insert = Locations.insert(Location(None, msg.from.get.id, msg.chat.id, location.longitude, location.latitude, true, "", name, new Instant(), minIndex))
+            _ <- MysqlUtils.db.run(insert)
+            _ <- reply(s"Добавил точку $minIndex $name. Чтобы переименовать, воспользуйтесь /rename ${minIndex} [новое_имя]")
+          } yield ()
+          logger.info(msg.toString)
+        })
+      } else if (getIdx(msg).getOrElse(-1) > 1) {
+        show(getIdx(msg).get)
+      }
+      else {
+        reply("Не понял команду")
+      }
+    }
   }
 
   def checkUser(userId: Int)(implicit msg: Message): Future[Unit] = {
