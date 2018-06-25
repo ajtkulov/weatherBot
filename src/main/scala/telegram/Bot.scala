@@ -94,14 +94,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   onCommand("/showAll") { implicit msg =>
     for {
       active <- MysqlUtils.db.run(Locations.getByUserId(msg.from.get.id))
-      _ = active.foreach {
-        location => {
-          for {
-            _ <- reply(s"""${location.index}: ${location.name}""")
-          } yield ()
-        }
-      }
-
+      _ <- Future.traverse(active)(location => reply(s"""${location.index}: ${location.name}"""))
     } yield ()
   }
 
@@ -142,11 +135,10 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
       }.isSuccess && args.head.toInt > 0) {
         val index = args.head.toInt
         for {
-          locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
-          _ = locations.headOption.foreach(location => {
-            MysqlUtils.db.run(Locations.insert(location.copy(name = args.drop(1).mkString(" ").take(64))))
-          })
-          _ <- reply("Точка переименована")
+          locations <- OptionT.liftF(MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index)))
+          location <- OptionT.fromOption[Future](locations.headOption)
+          _ <- OptionT.liftF(MysqlUtils.db.run(Locations.insert(location.copy(name = args.drop(1).mkString(" ").take(64)))))
+          _ <- OptionT.liftF(reply("Точка переименована"))
         } yield ()
       }
       else {
@@ -206,25 +198,20 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   def checkUsers(): Future[Unit] = {
     for {
       active: Seq[Location] <- MysqlUtils.db.run(Locations.findActive())
-      _ = active.foreach(location => {
-        WebServer.getData(location.longitude, location.latitude).foreach(forecast => {
+      _ <- Future.traverse(active)(location => {
+        WebServer.getData(location.longitude, location.latitude).flatMap(forecast => {
           if (forecast.values.toList.exists(x => x.inside.isDefined)) {
             val show = Shows.showSimpleTimeLineForecase.show(forecast)
             val result =
               s"""В точке ${location.index}: ${location.name} ожидаются осадки.
                  |$show
-          """.stripMargin
-            request(
-              SendMessage(
-                location.chatId,
-                result
-              )
-            )
+               """.stripMargin
+            request(SendMessage(location.chatId, result))
+          } else {
+            Future.successful()
           }
         })
       })
     } yield ()
   }
-
-
 }
