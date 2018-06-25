@@ -12,6 +12,9 @@ import web.{Holder, WebServer}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
+import cats.data.OptionT
+import cats.implicits._
+import telegram.Bot.reply
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
@@ -102,19 +105,23 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
     } yield ()
   }
 
-  def show(index: Int)(implicit msg: Message): Future[Unit] = {
+  def show(index: Int)(implicit msg: Message): OptionT[Future, Unit] = {
     for {
-      locations <- MysqlUtils.db.run(Locations.getByUserIdAndIndex(msg.from.get.id, index))
+      userId <- OptionT.fromOption[Future](msg.from)
+      locations: Seq[Location] <- OptionT.liftF(MysqlUtils.db.run(Locations.getByUserIdAndIndex(userId.id, index)))
       _ <- locations.headOption match {
-        case Some(location) => for {
-          _ <- reply(s"""${location.index}: ${location.name}""")
-          _ <- request(SendLocation(location.chatId, location.latitude, location.longitude))
-          forecast <- WebServer.getData(location.longitude, location.latitude)
-          _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
-        } yield ()
-
-        case None => reply(s"Не существующая точка ${index}")
+        case None => OptionT.liftF(reply(s"Не существующая точка ${index}"))
+        case Some(location) => OptionT.liftF(show(location))
       }
+    } yield ()
+  }
+
+  def show(location: Location)(implicit msg: Message): Future[Unit] = {
+    for {
+      _ <- reply(s"""${location.index}: ${location.name}""")
+      _ <- request(SendLocation(location.chatId, location.latitude, location.longitude))
+      forecast <- WebServer.getData(location.longitude, location.latitude)
+      _ <- reply(Shows.showSimpleTimeLineForecase.show(forecast))
     } yield ()
   }
 
@@ -149,7 +156,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
     }
   }
 
-  def getIdx(msg: Message) = {
+  def getIdx(msg: Message): Option[Int] = {
     msg.text.map(x => {
       val i: Int = Try {
         x.toInt

@@ -35,6 +35,8 @@ libraryDependencies ++= Seq(
   "org.scalatest"     %% "scalatest"            % "3.0.1"         % Test
 )
 
+libraryDependencies += "org.typelevel" %% "cats-core" % "1.1.0"
+
 fork := true
 
 fork in run := true
