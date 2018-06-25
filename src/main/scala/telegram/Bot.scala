@@ -192,16 +192,14 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   def checkUser(userId: Int)(implicit msg: Message): Future[Unit] = {
     for {
       active: Seq[Location] <- MysqlUtils.db.run(Locations.getByUserId(userId))
-      _ = active.foreach(location => {
-        WebServer.getData(location.longitude, location.latitude).foreach(forecast => {
-          val show = Shows.showSimpleTimeLineForecase.show(forecast)
-          val result =
-            s"""${location.index}: ${location.name}
-               |$show
+      forecasts <- Future.traverse(active)(location => WebServer.getData(location.longitude, location.latitude).map(x => (x, location)))
+      shows = forecasts.map(x => (Shows.showSimpleTimeLineForecase.show(x._1), x._2))
+      results = shows.map { case (show, location) =>
+        s"""${location.index}: ${location.name}
+           | $show
           """.stripMargin
-          reply(result)
-        })
-      })
+      }
+      _ <- Future.traverse(results)(x => reply(x))
     } yield ()
   }
 
