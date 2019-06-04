@@ -15,7 +15,7 @@ class HolderActor extends Actor {
   var state: Option[SkyTimeLine] = None
 
   override def receive: Receive = {
-    case Update() => state = Some(Request.getModels(new Instant()))
+    case Update() => state = Some(Request.getModels())
 
     case Query(long, lat) => sender() ! state.map(model => model.forecast(Coor(long, lat))).getOrElse(Map())
   }

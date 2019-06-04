@@ -1,27 +1,47 @@
 package request
 
-import model.{ModelReader, SkyTimeLine}
-import org.joda.time.{Duration, Instant}
+import model.{Cloud, ModelReader, SkyTimeLine}
+import org.joda.time.Instant
 import org.slf4j.LoggerFactory
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, JsString, JsValue, Json}
 
+import scala.util.Try
+
+
+case class MetaData(time: Instant, prefixUrl: String) {}
+
+case class MetaDataObject(values: List[MetaData])
+
+object MetaDataObject {
+  def readJson(jsValue: JsValue): MetaDataObject = {
+
+    val obj: JsObject = jsValue.as[JsObject]
+
+    MetaDataObject(obj.fields.collect { case (timeStamp, url: JsString) => MetaData(new Instant(timeStamp.toLong * 1000), url.value) }.toList)
+  }
+}
 
 object Request {
   lazy val logger = LoggerFactory.getLogger(getClass)
 
-  def get(time: Instant): String = {
-    val roundTime = ((time.getMillis / 1000) / 600) * 600
-    val path = s"https://yandex.ru/pogoda/front/nowcast-prec?lon_min=10.453537087701307&lat_min=10.90468765955104&lon_max=62.40666208770129&lat_max=63.708333078668836&is_old=false&zoom=8&ts=${roundTime}"
-
-    scala.io.Source.fromURL(path).getLines().mkString("")
+  def getMeta(): MetaDataObject = {
+    val url = s"https://yandex.ru/pogoda/front/maps/amanifest?type=nowcast"
+    val json = scala.io.Source.fromURL(url).getLines().mkString("")
+    MetaDataObject.readJson(Json.parse(json))
   }
 
-  def getModel(time: Instant): SkyTimeLine = {
-    SkyTimeLine(ModelReader.readJson(Json.parse(get(time))))
+  private def get(metaData: MetaData): List[Cloud] = {
+    List("50_60_10.json").toParArray.flatMap { suffix =>
+      Try {
+        val url = s"${metaData.prefixUrl}/2/$suffix"
+        val json = scala.io.Source.fromURL(url).getLines().mkString("")
+        ModelReader.readJson(metaData.time, Json.parse(json))
+      }.getOrElse(List())
+    }.toList
   }
 
-  def getModels(startTime: Instant): SkyTimeLine = {
-    logger.info("Get model")
-    SkyTimeLine(List.iterate(startTime, 6 * 3)(x => x.plus(Duration.standardMinutes(10))).toParArray.flatMap(x => ModelReader.readJson(Json.parse(get(x)))).toList)
+  def getModels(): SkyTimeLine = {
+    val meta = getMeta()
+    SkyTimeLine(meta.values.flatMap(get))
   }
 }

@@ -21,8 +21,6 @@ case class Poly(values: List[Coor]) {
   }
 }
 
-case class Model(coordinates: Array[Array[Array[BigDecimal]]])
-
 case class Cloud(timeStamp: Instant, poly: Poly, precipitationStrength: Double, precipitationType: Int) {}
 
 case class SkyTimeLine(clouds: List[Cloud]) {
@@ -41,7 +39,6 @@ case class Sky(clouds: List[Cloud]) {
 
     Forecast(inside, nearest)
   }
-
 }
 
 case class Forecast(inside: Option[Cloud], nearest: Cloud) {
@@ -117,33 +114,33 @@ object Shows {
 }
 
 object ModelReader {
-  def readJson(jsValue: JsValue): List[Cloud] = {
+  def readJson(instant: Instant, jsValue: JsValue): List[Cloud] = {
 
-    val obj: JsObject = jsValue.as[JsObject]
+    val obj: JsObject = (jsValue \ "polygons" \ "strength").as[JsObject]
 
-    obj.fields.flatMap(x => readCloud(new Instant(x._1.toLong * 1000), x._2)).toList
+    obj.fields.toList.flatMap {
+      case (strength, js) => readByStrength(instant, strength.toInt, js)
+    }
   }
 
-  def readCloud(timestamp: Instant, jsValue: JsValue): List[Cloud] = {
-    val obj = jsValue.as[JsObject]
-    (obj \ "features").as[JsArray].value.flatMap(x => readGeo(timestamp, x)).toList
+  def readByStrength(instant: Instant, strength: Int, js: JsValue): List[Cloud] = {
+    js.as[JsArray].value.toList.flatMap(x => readCloud(instant, strength, x))
+  }
+
+  def readCloud(instant: Instant, strength: Int, js: JsValue): List[Cloud] = {
+    val polies = (js \ "coords").as[List[List[List[BigDecimal]]]]
+
+    List(Cloud(instant, toPoly(polies.head), strength, 1))
   }
 
   def toCoor(values: List[BigDecimal]): Coor = {
-    Coor(values(0), values(1))
+    Coor(values(0) / 100000, values(1) / 100000)
   }
 
   def toPoly(values: List[List[BigDecimal]]): Poly = {
     Poly(values.map(toCoor))
   }
-
-  def readGeo(instant: Instant, jsValue: JsValue): List[Cloud] = {
-    val polies = (jsValue \ "geometry" \ "coordinates").as[List[List[List[BigDecimal]]]]
-
-    polies.map(x => Cloud(instant, toPoly(x), (jsValue \ "properties" \ "prec_strength").as[Double], (jsValue \ "properties" \ "prec_type").as[Int]))
-  }
 }
-
 
 object Geometry {
   lazy val rand = new Random(1)
