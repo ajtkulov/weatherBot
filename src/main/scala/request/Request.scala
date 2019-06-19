@@ -42,7 +42,7 @@ object Request {
       "1/0_80_40.json"
     ).toParArray.flatMap { suffix =>
       Try {
-8        val url = s"${metaData.prefixUrl}/$suffix"
+        val url = s"${metaData.prefixUrl}/$suffix"
         val json = scala.io.Source.fromURL(url).getLines().mkString("")
         ModelReader.readJson(metaData.time, Json.parse(json))
       }.getOrElse(List())
