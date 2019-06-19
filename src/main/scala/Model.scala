@@ -7,6 +7,11 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 
 import scala.util.{Random, Try}
+import Types._
+
+object Types {
+  type PrecipitationStrength = Int
+}
 
 case class Coor(x: BigDecimal, y: BigDecimal) {
   def -->(dest: Coor): Coor = {
@@ -21,7 +26,7 @@ case class Poly(values: List[Coor]) {
   }
 }
 
-case class Cloud(timeStamp: Instant, poly: Poly, precipitationStrength: Double, precipitationType: Int) {}
+case class Cloud(timeStamp: Instant, poly: Poly, precipitationStrength: PrecipitationStrength, precipitationType: Int) {}
 
 case class SkyTimeLine(clouds: List[Cloud]) {
   def forecast(pos: Coor): Map[Instant, Forecast] = {
@@ -33,7 +38,7 @@ case class Sky(clouds: List[Cloud]) {
   require(clouds.map(_.timeStamp).distinct.size == 1)
 
   def forecast(pos: Coor): Forecast = {
-    val inside = clouds.filter(cloud => Geometry.inside(cloud.poly, pos)).sortBy(x => x.precipitationStrength)(Ordering[Double].reverse).headOption
+    val inside = clouds.filter(cloud => Geometry.inside(cloud.poly, pos)).sortBy(x => x.precipitationStrength)(Ordering[PrecipitationStrength].reverse).headOption
 
     val nearest = clouds.map(cloud => (cloud, Geometry.nearest(cloud.poly, pos))).minBy(x => x._2)._1
 
@@ -47,7 +52,7 @@ case class Forecast(inside: Option[Cloud], nearest: Cloud) {
   }
 }
 
-case class SimpleForecast(inside: Option[(Double, Int)], distance: BigDecimal)
+case class SimpleForecast(inside: Option[(PrecipitationStrength, Int)], distance: BigDecimal)
 
 object Serialization {
   implicit val writer: Writes[SimpleForecast] = new Writes[SimpleForecast] {
@@ -96,10 +101,10 @@ object Shows {
   implicit val showSimpleForecast: Show[SimpleForecast] = new Show[SimpleForecast] {
     override def show(value: SimpleForecast): String = {
       value match {
-        case SimpleForecast(Some((0.25, 1)), _) => """🌦️"""
-        case SimpleForecast(Some((0.5, 1)), _) => "🌧"
-        case SimpleForecast(Some((0.75, 1)), _) => "⛈"
-        case SimpleForecast(Some((1.0, 1)), _) => "⚡"
+        case SimpleForecast(Some((1, 1)), _) => """🌦️"""
+        case SimpleForecast(Some((2, 1)), _) => "🌧"
+        case SimpleForecast(Some((3, 1)), _) => "⛈"
+        case SimpleForecast(Some((strength, 1)), _) if strength > 3 => "⚡"
         case SimpleForecast(None, d) if d < 2 => "☁️"
         case SimpleForecast(None, d) if d <= 5.1 => "❔"
         case SimpleForecast(None, d) if d > 50 => """☀"""
