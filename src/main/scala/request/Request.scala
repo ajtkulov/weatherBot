@@ -31,9 +31,18 @@ object Request {
   }
 
   private def get(metaData: MetaData): List[Cloud] = {
-    List("50_60_10.json").toParArray.flatMap { suffix =>
+    List(
+      "1/0_-40_40.json",
+      "1/40_-40_40.json",
+      "1/0_40_40.json",
+      "1/0_0_40.json",
+      "1/40_0_40.json",
+      "1/40_40_40.json",
+      "1/40_80_40.json",
+      "1/0_80_40.json"
+    ).toParArray.flatMap { suffix =>
       Try {
-        val url = s"${metaData.prefixUrl}/2/$suffix"
+8        val url = s"${metaData.prefixUrl}/$suffix"
         val json = scala.io.Source.fromURL(url).getLines().mkString("")
         ModelReader.readJson(metaData.time, Json.parse(json))
       }.getOrElse(List())

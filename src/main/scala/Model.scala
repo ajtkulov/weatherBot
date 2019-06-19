@@ -130,11 +130,11 @@ object ModelReader {
   def readCloud(instant: Instant, strength: Int, js: JsValue): List[Cloud] = {
     val polies = (js \ "coords").as[List[List[List[BigDecimal]]]]
 
-    List(Cloud(instant, toPoly(polies.head), strength, 1))
+    polies.flatMap(poly => List(Cloud(instant, toPoly(poly), strength, 1)))
   }
 
   def toCoor(values: List[BigDecimal]): Coor = {
-    Coor(values(0) / 100000, values(1) / 100000)
+    Mercator.fromMercator(values(0), values(1))
   }
 
   def toPoly(values: List[List[BigDecimal]]): Poly = {
@@ -209,5 +209,46 @@ object Geometry {
 
   def nearest(poly: Poly, d: Coor): BigDecimal = {
     poly.values.map(sphereDistance(_, d)).min
+  }
+}
+
+object Mercator {
+  val a = 6378137.0
+  val b = 6356752.3142
+  val f: Double = (a - b) / a
+  val e: Double = Math.sqrt(2 * f - f * f)
+
+  @inline
+  def formRadians(rad: Double): Double = {
+    rad * 180 / Math.PI
+  }
+
+  def toMercator(long: BigDecimal, lat: BigDecimal): Coor = {
+    val rLat = Math.toRadians(lat.toDouble)
+    val rLong = Math.toRadians(long.toDouble)
+
+    val x = a * rLong
+    val y = a * Math.log(Math.tan(Math.PI / 4 + rLat / 2) * Math.pow((1 - e * Math.sin(rLat)) / (1 + e * Math.sin(rLat)), e / 2))
+
+    Coor(x, y)
+  }
+
+  def fromMercator(mLong: BigDecimal, mLat: BigDecimal): Coor = {
+    val long = formRadians(mLong.toDouble / a)
+
+    val eps = 0.000001
+    var l: Double = -85
+    var r: Double = 85
+    while (r - l > eps) {
+      val m = (r + l) / 2
+      val mer = toMercator(0, m)
+      if (mer.y > mLat) {
+        r = m
+      } else {
+        l = m
+      }
+    }
+
+    Coor(long, l)
   }
 }
