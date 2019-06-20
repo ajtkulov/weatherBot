@@ -1,10 +1,11 @@
+import sbt.Keys.libraryDependencies
 
 name := "weatherBot "
 
 version := "0.1"
 
 lazy val akkaHttpVersion = "10.0.10"
-lazy val akkaVersion    = "2.5.4"
+lazy val akkaVersion = "2.5.4"
 
 scalaVersion := "2.12.3"
 
@@ -25,14 +26,14 @@ libraryDependencies += "org.slf4j" % "log4j-over-slf4j" % "1.7.16"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.1"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-  "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
-  "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
-  "org.scalatest"     %% "scalatest"            % "3.0.1"         % Test
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
+  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
+  "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+  "org.scalatest" %% "scalatest" % "3.0.1" % Test
 )
 
 libraryDependencies += "org.typelevel" %% "cats-core" % "1.1.0"
@@ -46,7 +47,8 @@ libraryDependencies ++= Seq(
   "mysql" % "mysql-connector-java" % "5.1.39",
   "org.joda" % "joda-convert" % "1.6",
   "com.github.tototoshi" %% "slick-joda-mapper" % "2.3.0",
-  "com.typesafe.slick" %% "slick-codegen" % "3.2.3"
+  "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
+  "com.github.nscala-time" %% "nscala-time" % "2.22.0"
 )
 
 libraryDependencies += "com.typesafe" % "config" % "1.2.1"
