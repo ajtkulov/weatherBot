@@ -18,6 +18,7 @@ import telegram.Bot.reply
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
+    WebServer.init()
     Bot.run()
   }
 }

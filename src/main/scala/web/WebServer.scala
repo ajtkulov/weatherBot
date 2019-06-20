@@ -29,7 +29,7 @@ object WebServer {
 
   holderActor ! Update()
 
-  system.scheduler.schedule(5 minutes, 10 minutes, holderActor, Update())(executionContext)
+  system.scheduler.schedule(0 minutes, 10 minutes, holderActor, Update())(executionContext)
 
   def getData(long: BigDecimal, lat: BigDecimal): Future[SimpleTimeLineForecast] = (holderActor ? Query(long, lat)).map(any => any.asInstanceOf[Forecast.TimeLineForecase].mapValues(_.toSimple(Coor(long, lat))))
 
@@ -49,5 +49,9 @@ object WebServer {
 
     logger.info("Starting web server on port 8080")
     Http().bindAndHandle(route, "localhost", 8080)
+  }
+
+  def init(): Unit = {
+    holderActor ! Update()
   }
 }
