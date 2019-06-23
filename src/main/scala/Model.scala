@@ -5,7 +5,7 @@ import org.joda.time.{DateTime, Instant}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Writes}
 import play.api.libs.json._
 import play.api.libs.json.Json._
-
+import com.github.nscala_time.time.Imports._
 import scala.util.{Random, Try}
 import Types._
 
@@ -30,7 +30,7 @@ case class Cloud(timeStamp: Instant, poly: Poly, precipitationStrength: Precipit
 
 case class SkyTimeLine(clouds: List[Cloud]) {
   def forecast(pos: Coor): Map[Instant, Forecast] = {
-    clouds.groupBy(_.timeStamp).mapValues(Sky.apply).mapValues(_.forecast(pos))
+    clouds.groupBy(_.timeStamp).filterKeys(instant => instant >= new Instant()).mapValues(Sky.apply).mapValues(_.forecast(pos))
   }
 }
 
