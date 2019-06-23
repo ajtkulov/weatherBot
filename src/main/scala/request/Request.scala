@@ -50,6 +50,7 @@ object Request {
   }
 
   def getModels(): SkyTimeLine = {
+    logger.info("call getModels")
     val meta = getMeta()
     SkyTimeLine(meta.values.flatMap(get))
   }

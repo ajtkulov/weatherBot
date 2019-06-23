@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import cats.data.OptionT
 import cats.implicits._
-import telegram.Bot.reply
+import com.typesafe.scalalogging.Logger
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
@@ -25,8 +25,10 @@ object Main extends App {
 
 object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   implicit val akkaSystem = Holder.system
+  override val logger = Logger(getClass)
 
-  akkaSystem.scheduler.schedule(20 minutes, 20 minutes, () => {
+  akkaSystem.scheduler.schedule(3 minutes, 20 minutes, () => {
+    logger.info("schedule call")
     val now = new DateTime(DateTimeZone.forID("Europe/Moscow"))
     val hour = now.getHourOfDay
     if (hour >= 5 && hour <= 22) {
@@ -197,6 +199,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
   }
 
   def checkUsers(): Future[Unit] = {
+    logger.info("call checkUsers method")
     for {
       active: Seq[Location] <- MysqlUtils.db.run(Locations.findActive())
       _ <- Future.traverse(active)(location => {
