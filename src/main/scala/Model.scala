@@ -139,7 +139,7 @@ object ModelReader {
   }
 
   def toCoor(values: List[BigDecimal]): Coor = {
-    Mercator.fromMercator(values(0), values(1), Mercator.toSpherMercator)
+    Mercator.fromMercator(values(0), values(1), Mercator.toMercator)
   }
 
   def toPoly(values: List[List[BigDecimal]]): Poly = {
