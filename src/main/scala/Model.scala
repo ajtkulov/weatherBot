@@ -139,7 +139,7 @@ object ModelReader {
   }
 
   def toCoor(values: List[BigDecimal]): Coor = {
-    Mercator.fromMercator(values(0), values(1))
+    Mercator.fromMercator(values(0), values(1), Mercator.toSpherMercator)
   }
 
   def toPoly(values: List[List[BigDecimal]]): Poly = {
@@ -238,7 +238,17 @@ object Mercator {
     Coor(x, y)
   }
 
-  def fromMercator(mLong: BigDecimal, mLat: BigDecimal): Coor = {
+  def toSpherMercator(long: BigDecimal, lat: BigDecimal): Coor = {
+    val rLat = Math.toRadians(lat.toDouble)
+    val rLong = Math.toRadians(long.toDouble)
+
+    val x = a * rLong
+    val y = a * Math.log(Math.tan(Math.PI / 4 + rLat / 2))
+
+    Coor(x, y)
+  }
+
+  def fromMercator(mLong: BigDecimal, mLat: BigDecimal, mercFunc: (BigDecimal, BigDecimal) => Coor): Coor = {
     val long = formRadians(mLong.toDouble / a)
 
     val eps = 0.000001
@@ -246,7 +256,7 @@ object Mercator {
     var r: Double = 85
     while (r - l > eps) {
       val m = (r + l) / 2
-      val mer = toMercator(0, m)
+      val mer = mercFunc(0, m)
       if (mer.y > mLat) {
         r = m
       } else {
