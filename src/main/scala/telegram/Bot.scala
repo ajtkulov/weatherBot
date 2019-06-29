@@ -29,11 +29,7 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
 
   akkaSystem.scheduler.schedule(3 minutes, 20 minutes, () => {
     logger.info("schedule call")
-    val now = new DateTime(DateTimeZone.forID("Europe/Moscow"))
-    val hour = now.getHourOfDay
-    if (hour >= 5 && hour <= 22) {
-      checkUsers()
-    }
+    checkUsers()
   })
 
   lazy val token: String = scala.io.Source.fromFile("tg.token").getLines.toList.head.trim
@@ -198,13 +194,20 @@ object Bot extends TelegramBot with Polling with Commands with InlineQueries {
     } yield ()
   }
 
+  def checkTime(utcNow: DateTime, long: Double): Boolean = {
+    val hour = (long / 15 + utcNow.getHourOfDay) % 24
+    hour >= 6 && hour <= 22
+  }
+
   def checkUsers(): Future[Unit] = {
     logger.info("call checkUsers method")
+    val now = new DateTime(DateTimeZone.forID("Europe/London"))
     for {
       active: Seq[Location] <- MysqlUtils.db.run(Locations.findActive())
+
       _ <- Future.traverse(active)(location => {
         WebServer.getData(location.longitude, location.latitude).flatMap(forecast => {
-          if (forecast.values.toList.exists(x => x.inside.isDefined)) {
+          if (checkTime(now, location.longitude) && forecast.values.toList.exists(x => x.inside.isDefined)) {
             val show = Shows.showSimpleTimeLineForecase.show(forecast)
             val result =
               s"""В точке ${location.index}: ${location.name} ожидаются осадки.
